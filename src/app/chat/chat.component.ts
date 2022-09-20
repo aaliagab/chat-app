@@ -14,6 +14,7 @@ export class ChatComponent implements OnInit {
   conectado: boolean = false;
   mensaje: Mensaje = new Mensaje();
   mensajes: Mensaje[] = [];
+  escribiendo: string = '';
   constructor() { }
 
   ngOnInit(): void {
@@ -26,12 +27,22 @@ export class ChatComponent implements OnInit {
       console.log("Conectado: "+this.client.connected+" : "+frame);
       this.conectado = true;
 
-      this.client.subscribe('/chat/mensaje', e=>{
-        let mensaje: Mensaje = JSON.parse(e.body) as Mensaje;
+      this.client.subscribe('/chat/mensaje', resultado=>{
+        let mensaje: Mensaje = JSON.parse(resultado.body) as Mensaje;
         mensaje.fecha = new Date(mensaje.fecha).getTime();
+        if(!this.mensaje.color && mensaje.tipo == 'NUEVO_USUARIO' &&
+            this.mensaje.username == mensaje.username){
+              this.mensaje.color = mensaje.color;
+        }
         this.mensajes.push(mensaje);
         console.log(mensaje);
       });
+
+      this.client.subscribe('/chat/escribiendo', resultado=>{
+        this.escribiendo = resultado.body;
+        setTimeout(() => this.escribiendo = '', 3000);
+      });
+
       this.mensaje.tipo = "NUEVO_USUARIO";
       this.client.publish({destination: '/app/mensaje', body: JSON.stringify(this.mensaje)});
     }
@@ -56,6 +67,10 @@ export class ChatComponent implements OnInit {
     this.mensaje.tipo = "MENSAJE";
     this.client.publish({destination: '/app/mensaje', body: JSON.stringify(this.mensaje)});
     this.mensaje.texto = '';
+  }
+
+  escribiendoMensaje():void{
+    this.client.publish({destination: '/app/escribiendo', body: this.mensaje.username});
   }
 
 }
